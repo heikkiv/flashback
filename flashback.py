@@ -4,10 +4,14 @@ import sys
 sys.path.insert(0, 'lib')
 
 import authenticator
+import mailer
+
 import pprint
 import httplib2
 from apiclient.discovery import build
 from datetime import date
+from random import randint
+import ConfigParser
 
 def get_year_month_day():
   today = date.today()
@@ -61,6 +65,10 @@ def find_files_in_folder(service, parent_folder):
 
 
 def main():
+  config = ConfigParser.ConfigParser()
+  config.readfp(open('config.cfg'))
+  aws_credentials = (config.get('default', 'aws_access_key_id'), config.get('default', 'aws_access_key_secret'))
+  
   credentials = authenticator.get_credentials()
 
   # Create an httplib2.Http object and authorize it with our credentials
@@ -70,15 +78,20 @@ def main():
   service = build('drive', 'v2', http=http)
 
   today = get_year_month_day()
+  print "Today is %d.%d.%d" % (today[2], today[1], today[0])
+  target_day = (today[0] - 1, today[1], today[2])
+  print "Looking for photos taken on %d.%d.%d" % (target_day[2], target_day[1], target_day[0])
   
-  #file = drive_service.files().insert(body=body, media_body=media_body).execute()
-  #files = drive_service.files().list(q="mimeType = 'application/vnd.google-apps.folder'",maxResults=10).execute()
   pictures_folder = service.files().get(fileId='0B1lcwvVRt_4zOEV1czhiZWN1NVE').execute()
-  files = find_files(service, pictures_folder, (today[0] - 1, today[1], today[2]))
-  for file in files:
-    print file['title']
-  #list_files(service, files['items'][0])
-  #pprint.pprint(files)
-
+  files = find_files(service, pictures_folder, target_day)
+  #for file in files:
+    #print file['title']
+  
+  i = randint(0,len(files)-1)
+  selected_file = files[i]
+  print "Selected: " + selected_file['title']
+  
+  mailer.send_email('test SES mail', 'flashback.py', aws_credentials)
+  
 if __name__ == "__main__":
     main()
