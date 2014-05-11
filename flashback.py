@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding=utf-8
 
 import sys
 
@@ -6,8 +7,8 @@ sys.path.insert(0, 'lib')
 
 import authenticator
 import mailer
+import downloader
 
-import pprint
 import httplib2
 from apiclient.discovery import build
 from datetime import date
@@ -81,20 +82,35 @@ def main():
 
     today = get_year_month_day()
     print "Today is %d.%d.%d" % (today[2], today[1], today[0])
-    target_day = (today[0] - 1, today[1], today[2])
-    print "Looking for photos taken on %d.%d.%d" % (target_day[2], target_day[1], target_day[0])
 
     pictures_folder = service.files().get(fileId='0B1lcwvVRt_4zOEV1czhiZWN1NVE').execute()
-    files = find_files(service, pictures_folder, target_day)
-    #for file in files:
-    #print file['title']
 
-    i = randint(0, len(files) - 1)
-    selected_file = files[i]
-    print "Selected: " + selected_file['title']
+    selected_files = []
+    for i in range(1, 10):
+        target_day = (today[0] - i, today[1], today[2])
+        print "Looking for photos taken on %d.%d.%d" % (target_day[2], target_day[1], target_day[0])
 
-    mailer.send_email('test SES mail', 'flashback.py', aws_credentials)
+        files = find_files(service, pictures_folder, target_day)
+        #for file in files:
+        #print file['title']
 
+        if files:
+            i = randint(0, len(files) - 1)
+            selected_files.append(files[i])
+            print "Selected: " + files[i]['title']
+
+    if len(selected_files) > 0:
+        for drive_file in selected_files:
+            print "Downloading " + drive_file['title']
+            content = downloader.download_file(service, drive_file)
+            f = open("/tmp/" + drive_file['title'], 'w')
+            f.write(content)
+
+        filenames = ["/tmp/" + f['title'] for f in selected_files]
+        mailer.send_email('Muistatko nämä', 'Tapahtui tänään %d.%d. edellisinä vuosina' % (today[2], today[1]), filenames, aws_credentials)
+        print "Mail sent with %d images" % len(selected_files)
+    else:
+        print "No images for today"
 
 if __name__ == "__main__":
     main()

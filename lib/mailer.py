@@ -7,10 +7,10 @@ from email.mime.multipart import MIMEMultipart
 import boto
 
 
-def send_email(text, filename, id_and_secret):
+def send_email(subject, text, filenames, id_and_secret):
     # via http://codeadict.wordpress.com/2010/02/11/send-e-mails-with-attachment-in-python/
     msg = MIMEMultipart()
-    msg['Subject'] = 'Flashback'
+    msg['Subject'] = subject
     msg['From'] = 'heikki.verta@gmail.com'
     msg['To'] = 'heikki.verta@gmail.com'
 
@@ -22,9 +22,10 @@ def send_email(text, filename, id_and_secret):
     msg.attach(part)
 
     # the attachment
-    part = MIMEApplication(open(filename, 'rb').read())
-    part.add_header('Content-Disposition', 'attachment', filename=filename)
-    msg.attach(part)
+    for filename in filenames:
+        part = MIMEApplication(open(filename, 'rb').read())
+        part.add_header('Content-Disposition', 'attachment', filename=filename)
+        msg.attach(part)
 
     # connect to SES
     connection = boto.connect_ses(aws_access_key_id=id_and_secret[0]
