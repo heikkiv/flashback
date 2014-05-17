@@ -18,7 +18,7 @@ import ConfigParser
 
 def get_year_month_day():
     today = date.today()
-    return (today.year, today.month, today.day)
+    return today.year, today.month, today.day
 
 
 def list_files(service, folder):
@@ -67,7 +67,7 @@ def find_files_in_folder(service, parent_folder):
     return files
 
 
-def main():
+def main(source, recipients):
     config = ConfigParser.ConfigParser()
     config.readfp(open('config.cfg'))
     aws_credentials = (config.get('default', 'aws_access_key_id'), config.get('default', 'aws_access_key_secret'))
@@ -96,21 +96,27 @@ def main():
 
         if files:
             i = randint(0, len(files) - 1)
-            selected_files.append(files[i])
+            selected_files.append((target_day, files[i]))
             print "Selected: " + files[i]['title']
 
     if len(selected_files) > 0:
-        for drive_file in selected_files:
+        for date, drive_file in selected_files:
             print "Downloading " + drive_file['title']
             content = downloader.download_file(service, drive_file)
             f = open("/tmp/" + drive_file['title'], 'w')
             f.write(content)
 
-        filenames = ["/tmp/" + f['title'] for f in selected_files]
-        mailer.send_email('Muistatko nämä', 'Tapahtui tänään %d.%d. edellisinä vuosina' % (today[2], today[1]), filenames, aws_credentials)
+        #filenames = [(day, unicode("/tmp/" + f['title'], "utf-8")) for (day, f) in selected_files]
+        filenames = [(day, "/tmp/" + f['title']) for (day, f) in selected_files]
+
+        mailer.send_email(today, source, recipients, 'Muistatko nämä', filenames, aws_credentials)
         print "Mail sent with %d images" % len(selected_files)
     else:
         print "No images for today"
 
 if __name__ == "__main__":
-    main()
+    source = sys.argv[1]
+    recipients = sys.argv[2:]
+    print source
+    print recipients
+    main(source, recipients)
