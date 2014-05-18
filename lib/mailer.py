@@ -55,5 +55,5 @@ def send_email(today, source, recipients, dates_and_filenames, id_and_secret):
     # and send the message
     result = connection.send_raw_email(msg.as_string()
                                        , source=msg['From']
-                                       , destinations=[msg['To']])
+                                       , destinations=recipients)
     return result
