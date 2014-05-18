@@ -11,9 +11,9 @@ from email.header import Header
 import boto
 
 
-def send_email(today, source, recipients, subject, dates_and_filenames, id_and_secret):
+def send_email(today, source, recipients, dates_and_filenames, id_and_secret):
     msg = MIMEMultipart()
-    msg['Subject'] = Header(subject, 'utf-8')
+    msg['Subject'] = Header(u'Tapahtui tänään %d.%d. edellisinä vuosina' % (today[2], today[1]), 'utf-8')
     msg['From'] = source
     msg['To'] = ', '.join(recipients)
 
@@ -29,11 +29,11 @@ def send_email(today, source, recipients, subject, dates_and_filenames, id_and_s
     msg_alternative.attach(msg_text)
 
     # the pictures
-    html = u'<h3>Tapahtui tänään %d.%d. edellisinä vuosina</h3>' % (today[2], today[1])
+    html = u''
     for date, filename in dates_and_filenames:
 
         html += u'<strong>%d.%d.%d</strong>' % (date[2], date[1], date[0])
-        html += u'<br><br><img src="cid:' + filename + u'">'
+        html += u'<br><br><img src="cid:' + filename + u'"><br><br>'
 
          # This example assumes the image is in the current directory
         fp = open(filename, 'rb')

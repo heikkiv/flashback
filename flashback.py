@@ -72,18 +72,19 @@ def main(source, recipients):
     config.readfp(open('config.cfg'))
     aws_credentials = (config.get('default', 'aws_access_key_id'), config.get('default', 'aws_access_key_secret'))
 
-    credentials = authenticator.get_credentials()
+    google_credentials = authenticator.get_credentials()
 
-    # Create an httplib2.Http object and authorize it with our credentials
+    # Create an httplib2.Http object and authorize it with our google_credentials
     http = httplib2.Http()
-    http = credentials.authorize(http)
+    http = google_credentials.authorize(http)
 
     service = build('drive', 'v2', http=http)
 
     today = get_year_month_day()
     print "Today is %d.%d.%d" % (today[2], today[1], today[0])
 
-    pictures_folder = service.files().get(fileId='0B1lcwvVRt_4zOEV1czhiZWN1NVE').execute()
+    pictures_folder_file_id = '0B1lcwvVRt_4zOEV1czhiZWN1NVE'
+    pictures_folder = service.files().get(fileId=pictures_folder_file_id).execute()
 
     selected_files = []
     for i in range(1, 10):
@@ -100,6 +101,7 @@ def main(source, recipients):
             print "Selected: " + files[i]['title']
 
     if len(selected_files) > 0:
+        print "Selected %d images in total" % len(selected_files)
         for date, drive_file in selected_files:
             print "Downloading " + drive_file['title']
             content = downloader.download_file(service, drive_file)
@@ -109,7 +111,7 @@ def main(source, recipients):
         #filenames = [(day, unicode("/tmp/" + f['title'], "utf-8")) for (day, f) in selected_files]
         filenames = [(day, "/tmp/" + f['title']) for (day, f) in selected_files]
 
-        mailer.send_email(today, source, recipients, 'Muistatko nämä', filenames, aws_credentials)
+        mailer.send_email(today, source, recipients, filenames, aws_credentials)
         print "Mail sent with %d images" % len(selected_files)
     else:
         print "No images for today"
@@ -117,6 +119,4 @@ def main(source, recipients):
 if __name__ == "__main__":
     source = sys.argv[1]
     recipients = sys.argv[2:]
-    print source
-    print recipients
     main(source, recipients)
