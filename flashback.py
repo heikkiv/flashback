@@ -7,12 +7,13 @@ sys.path.insert(0, 'lib')
 
 import authenticator
 import mailer
-import downloader
 
 import httplib2
 from apiclient.discovery import build
 from datetime import date
-from random import randint
+import random
+import string
+from apiclient import errors
 import ConfigParser
 
 
@@ -67,6 +68,47 @@ def find_files_in_folder(service, parent_folder):
     return files
 
 
+def get_file(service, file_id):
+    try:
+        return service.files().get(fileId=file_id).execute()
+    except errors.HttpError, error:
+        print 'An error occurred: %s' % error
+    return None
+
+
+def copy_to_public_folder(service, origin_file_id, public_folder_id):
+    title = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(32)) + '.jpg'
+    copied_file = {'title': title}
+    try:
+        copied_file = service.files().copy(fileId=origin_file_id, body=copied_file).execute()
+        original_parent = copied_file['parents'][0]['id']
+        insert_file_into_folder(service, public_folder_id, copied_file['id'])
+        remove_file_from_folder(service, original_parent, copied_file['id'])
+        make_file_public(service, copied_file['id'])
+        return copied_file
+    except errors.HttpError, error:
+        print 'An error occurred: %s' % error
+    return None
+
+
+def make_file_public(service, file_id):
+    permission = {
+        'value': '',
+        'type': 'anyone',
+        'role': 'reader'
+    }
+    return service.permissions().insert(fileId=file_id, body=permission).execute()
+
+
+def insert_file_into_folder(service, folder_id, file_id):
+    new_parent = {'id': folder_id}
+    return service.parents().insert(fileId=file_id, body=new_parent).execute()
+
+
+def remove_file_from_folder(service, folder_id, file_id):
+    service.parents().delete(fileId=file_id, parentId=folder_id).execute()
+
+
 def main(source, recipients):
     config = ConfigParser.ConfigParser()
     config.readfp(open('config.cfg'))
@@ -83,38 +125,34 @@ def main(source, recipients):
     today = get_year_month_day()
     print "Today is %d.%d.%d" % (today[2], today[1], today[0])
 
-    pictures_folder_file_id = '0B1lcwvVRt_4zOEV1czhiZWN1NVE'
-    pictures_folder = service.files().get(fileId=pictures_folder_file_id).execute()
+    pictures_folder_file_id = config.get('default', 'pictures_folder_id')
+    pictures_folder = get_file(service, pictures_folder_file_id)
+    public_folder_id = config.get('default', 'public_folder_id')
+    public_folder = get_file(service, public_folder_id)
 
-    selected_files = []
+    yearly_selected_files = []
     for i in range(1, 10):
         target_day = (today[0] - i, today[1], today[2])
         print "Looking for photos taken on %d.%d.%d" % (target_day[2], target_day[1], target_day[0])
-
         files = find_files(service, pictures_folder, target_day)
-        #for file in files:
-        #print file['title']
-
         if files:
-            i = randint(0, len(files) - 1)
-            selected_files.append((target_day, files[i]))
-            print "Selected: " + files[i]['title']
+            i = random.randint(0, len(files) - 1)
+            yearly_selected_files.append((target_day, files[i]))
 
-    if len(selected_files) > 0:
-        print "Selected %d images in total" % len(selected_files)
-        for date, drive_file in selected_files:
-            print "Downloading " + drive_file['title']
-            content = downloader.download_file(service, drive_file)
-            f = open("/tmp/" + drive_file['title'], 'w')
-            f.write(content)
-
-        #filenames = [(day, unicode("/tmp/" + f['title'], "utf-8")) for (day, f) in selected_files]
-        filenames = [(day, "/tmp/" + f['title']) for (day, f) in selected_files]
-
-        mailer.send_email(today, source, recipients, filenames, aws_credentials)
-        print "Mail sent with %d images" % len(selected_files)
+    if len(yearly_selected_files) > 0:
+        i = random.randint(0, len(yearly_selected_files) - 1)
+        selected_date = yearly_selected_files[i][0]
+        selected_file = yearly_selected_files[i][1]
+        print "Selected image %s from %d.%d.%d" % (selected_file['title'], selected_date[2], selected_date[1], selected_date[0])
+        public_selected_file = copy_to_public_folder(service, selected_file['id'], public_folder_id)
+        print "Copied selected image to public folder, id: %s" % public_selected_file['id']
+        url = public_folder['webViewLink'] + public_selected_file['title']
+        print url
+        mailer.send_email(today, source, recipients, [(selected_date, url)], aws_credentials)
+        print "Mail sent"
     else:
         print "No images for today"
+
 
 if __name__ == "__main__":
     source = sys.argv[1]

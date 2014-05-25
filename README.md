@@ -16,6 +16,8 @@ Create a config.cfg file with the following content:
 [default]
 aws_access_key_id=YOUR_AWS_ACCESS_KEY
 aws_access_key_secret=YOUR_AWS_SECRET_KEY
+pictures_folder_id=GOOGLE_DRIVE_FILE_ID_FOR_YOUR_SOURCE_PICTURES_FOLDER
+public_folder_id=GOOGLE_DRIVE_FILE_ID_FOR_YOUR_PUBLIC_PICTURES_FOLDER
 ```
 
 First time the script is run it will guide you through the Google Drive OAuth dance.

@@ -11,9 +11,9 @@ from email.header import Header
 import boto
 
 
-def send_email(today, source, recipients, dates_and_filenames, id_and_secret):
+def send_email(today, source, recipients, dates_and_urls, id_and_secret):
     msg = MIMEMultipart()
-    msg['Subject'] = Header(u'Tapahtui tänään %d.%d. edellisinä vuosina' % (today[2], today[1]), 'utf-8')
+    msg['Subject'] = Header(u'Tapahtui %d.%d.' % (today[2], today[1]), 'utf-8')
     msg['From'] = source
     msg['To'] = ', '.join(recipients)
 
@@ -30,19 +30,9 @@ def send_email(today, source, recipients, dates_and_filenames, id_and_secret):
 
     # the pictures
     html = u''
-    for date, filename in dates_and_filenames:
-
+    for date, url in dates_and_urls:
         html += u'<strong>%d.%d.%d</strong>' % (date[2], date[1], date[0])
-        html += u'<br><br><img src="cid:' + filename + u'"><br><br>'
-
-         # This example assumes the image is in the current directory
-        fp = open(filename, 'rb')
-        msg_image = MIMEImage(fp.read())
-        fp.close()
-
-        # Define the image's ID as referenced above
-        msg_image.add_header('Content-ID', '<' + filename + '>')
-        msg.attach(msg_image)
+        html += u'<br><br><img src="' + url + u'"><br><br>'
 
     # We reference the image in the IMG SRC attribute by the ID we give it below
     msg_text = MIMEText(html.encode('utf-8'), 'html', 'utf-8')
