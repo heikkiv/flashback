@@ -1,15 +1,15 @@
-import pprint
 import os.path
+import ConfigParser
 
-from apiclient.discovery import build
 from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.client import OAuth2Credentials
 from oauth2client.file import Storage
 
+config = ConfigParser.ConfigParser()
+config.readfp(open('config.cfg'))
 
 # Copy your credentials from the console
-CLIENT_ID = '20665032451-75qbcpnal2g8oel0f2a4r1emim4c70u0.apps.googleusercontent.com'
-CLIENT_SECRET = '8RhsozdbXAA_yQRynmVoOnhR'
+CLIENT_ID = config.get('default', 'google_app_client_id')
+CLIENT_SECRET = config.get('default', 'google_app_client_secret')
 
 # Check https://developers.google.com/drive/scopes for all available scopes
 OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive'
@@ -17,7 +17,6 @@ OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive'
 # Redirect URI for installed apps
 REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
-# Path to the file to upload
 FILENAME = '.credentials'
 
 
